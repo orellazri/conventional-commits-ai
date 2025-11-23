@@ -21,6 +21,11 @@ tasks:
     cmds:
       - bin/conventional-commits-ai
 
+  install:
+    desc: Install the binary locally
+    cmds:
+      - go install .
+
   release:
     desc: Release a new version
     cmds:
