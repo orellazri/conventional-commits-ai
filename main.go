@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime/debug"
 
 	"github.com/invopop/jsonschema"
 	"github.com/openai/openai-go/v3"
@@ -15,6 +16,8 @@ import (
 const (
 	MODEL = openai.ChatModelGPT4_1
 )
+
+var version = "dev"
 
 type CommitMessageResponse struct {
 	CommitMessage string `json:"commit_message"`
@@ -60,6 +63,11 @@ func run_git_branch() (string, error) {
 }
 
 func main() {
+	info, ok := debug.ReadBuildInfo()
+	if ok && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	}
+
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		fmt.Fprintln(os.Stderr, "OPENAI_API_KEY is not set")
