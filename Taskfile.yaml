@@ -20,3 +20,8 @@ tasks:
     deps: [build]
     cmds:
       - bin/conventional-commits-ai
+
+  release:
+    desc: Release a new version
+    cmds:
+      - bash hack/release.sh
