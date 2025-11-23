@@ -17,10 +17,6 @@ import (
 // This version variable is set at compile time using ldflags
 var version = "dev"
 
-const (
-	MODEL = openai.ChatModelGPT4_1
-)
-
 type CommitMessageResponse struct {
 	CommitMessage string `json:"commit_message"`
 }
@@ -64,37 +60,40 @@ func run_git_branch() (string, error) {
 	return string(output), nil
 }
 
-var rootCmd = &cobra.Command{
-	Use:   "conventional-commits-ai",
-	Short: "Generate conventional commit messages with AI",
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey := os.Getenv("OPENAI_API_KEY")
-		if apiKey == "" {
-			fmt.Fprintln(os.Stderr, "OPENAI_API_KEY is not set")
-			os.Exit(1)
-		}
+var (
+	model string
 
-		gitDiff, err := run_git_diff()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to run git diff:", err)
-			os.Exit(1)
-		}
+	rootCmd = &cobra.Command{
+		Use:   "conventional-commits-ai",
+		Short: "Generate conventional commit messages with AI",
+		Run: func(cmd *cobra.Command, args []string) {
+			apiKey := os.Getenv("OPENAI_API_KEY")
+			if apiKey == "" {
+				fmt.Fprintln(os.Stderr, "OPENAI_API_KEY is not set")
+				os.Exit(1)
+			}
 
-		gitLog, err := run_git_log()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to run git log:", err)
-			os.Exit(1)
-		}
+			gitDiff, err := run_git_diff()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Failed to run git diff:", err)
+				os.Exit(1)
+			}
 
-		gitBranch, err := run_git_branch()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to run git branch:", err)
-			os.Exit(1)
-		}
+			gitLog, err := run_git_log()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Failed to run git log:", err)
+				os.Exit(1)
+			}
 
-		client := openai.NewClient(option.WithAPIKey(apiKey))
+			gitBranch, err := run_git_branch()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Failed to run git branch:", err)
+				os.Exit(1)
+			}
 
-		systemPrompt := `You are a commit message generator.
+			client := openai.NewClient(option.WithAPIKey(apiKey))
+
+			systemPrompt := `You are a commit message generator.
 	You will be given a git diff of the current changes, a log of the last commits, and the current branch name.
 	Your job is to generate a commit message that is as short as possible but as descriptive as possible.
 	The generated commit message will be similar to the convention of the last commit messages (in terms of type, scope, subject)
@@ -123,42 +122,43 @@ var rootCmd = &cobra.Command{
 	<subject> is a short description of the change.
 	`
 
-		schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{
-			Name:        "commit_message",
-			Description: openai.String("Commit message"),
-			Schema:      CommitMessageResponseSchema,
-			Strict:      openai.Bool(true),
-		}
+			schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{
+				Name:        "commit_message",
+				Description: openai.String("Commit message"),
+				Schema:      CommitMessageResponseSchema,
+				Strict:      openai.Bool(true),
+			}
 
-		chat, err := client.Chat.Completions.New(context.Background(), openai.ChatCompletionNewParams{
-			Model: MODEL,
-			Messages: []openai.ChatCompletionMessageParamUnion{
-				openai.SystemMessage(systemPrompt),
-				openai.UserMessage(fmt.Sprintf("Current branch: %s", gitBranch)),
-				openai.UserMessage(fmt.Sprintf("Git diff:\n%s", gitDiff)),
-				openai.UserMessage(fmt.Sprintf("Git log:\n%s", gitLog)),
-			},
-			ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
-				OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
-					JSONSchema: schemaParam,
+			chat, err := client.Chat.Completions.New(context.Background(), openai.ChatCompletionNewParams{
+				Model: model,
+				Messages: []openai.ChatCompletionMessageParamUnion{
+					openai.SystemMessage(systemPrompt),
+					openai.UserMessage(fmt.Sprintf("Current branch: %s", gitBranch)),
+					openai.UserMessage(fmt.Sprintf("Git diff:\n%s", gitDiff)),
+					openai.UserMessage(fmt.Sprintf("Git log:\n%s", gitLog)),
 				},
-			},
-		})
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to create chat completion:", err)
-			os.Exit(1)
-		}
+				ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
+					OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
+						JSONSchema: schemaParam,
+					},
+				},
+			})
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Failed to create chat completion:", err)
+				os.Exit(1)
+			}
 
-		var commitMessageResponse CommitMessageResponse
-		if err := json.Unmarshal([]byte(chat.Choices[0].Message.Content), &commitMessageResponse); err != nil {
-			fmt.Fprintln(os.Stderr, "Failed to unmarshal commit message response:", err)
-			os.Exit(1)
-		}
+			var commitMessageResponse CommitMessageResponse
+			if err := json.Unmarshal([]byte(chat.Choices[0].Message.Content), &commitMessageResponse); err != nil {
+				fmt.Fprintln(os.Stderr, "Failed to unmarshal commit message response:", err)
+				os.Exit(1)
+			}
 
-		fmt.Println(commitMessageResponse.CommitMessage)
+			fmt.Println(commitMessageResponse.CommitMessage)
 
-	},
-}
+		},
+	}
+)
 
 func Execute() {
 	// If the version is not set at compile time, try to get it from the build info
@@ -175,13 +175,5 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.conventional-commits-ai.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().StringVarP(&model, "model", "m", "gpt-4.1", "OpenAI model to use (e.g., gpt-4.1, gpt-5, gpt-5-mini, gpt-5-nano, etc.)")
 }

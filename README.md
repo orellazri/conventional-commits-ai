@@ -37,3 +37,11 @@ To directly commit the generated commit message, you can run:
 ```bash
 git commit -m "$(conventional-commits-ai)"
 ```
+
+To use a different model, you can pass the `--model` flag:
+
+```bash
+conventional-commits-ai --model gpt-4.1-nano
+```
+
+The default model is `gpt-4.1`.
