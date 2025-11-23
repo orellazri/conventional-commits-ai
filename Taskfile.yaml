@@ -1,0 +1,22 @@
+version: "3"
+
+tasks:
+  default:
+    desc: List all tasks
+    cmds:
+     - task --list-all
+    quiet: true
+
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o bin/conventional-commits-ai main.go
+    generates:
+      - bin/conventional-commits-ai
+    run: once
+
+  run:
+    desc: Run the binary
+    deps: [build]
+    cmds:
+      - bin/conventional-commits-ai
