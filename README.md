@@ -32,10 +32,8 @@ Example output:
 feat(api): add search endpoint
 ```
 
-````
-
 To directly commit the generated commit message, you can run:
 
 ```bash
 git commit -m "$(conventional-commits-ai)"
-````
+```
