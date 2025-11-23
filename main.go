@@ -116,6 +116,9 @@ func main() {
 
 	<scope> is optional and can be anything specifying the place of the commit change.
 	If the git log contains previous examples of conventional commits, the scope should follow the pattern of the previous commits.
+	If the previous similar commits:
+	- do not contain a scope, then the scope should be the type of the commit.
+	- contain a ticket number or pull request number, then the scope should be the ticket number or pull request number.
 
 	<subject> is a short description of the change.
 	`
