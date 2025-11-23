@@ -38,6 +38,8 @@ To directly commit the generated commit message, you can run:
 git commit -m "$(conventional-commits-ai)"
 ```
 
+### OpenAI
+
 To use a different model, you can pass the `--model` flag:
 
 ```bash
@@ -45,3 +47,13 @@ conventional-commits-ai --model gpt-4.1-nano
 ```
 
 The default model is `gpt-4.1`.
+
+### Custom endpoints
+
+To use a custom endpoint (e.g. Ollama, LM Studio, etc.), you can pass the `--endpoint` flag along with the `--model` flag:
+
+```bash
+conventional-commits-ai --endpoint http://localhost:11434/v1 --model openai/gpt-oss-20b
+```
+
+The endpoint should be a valid OpenAI-compatible API endpoint, such as `http://localhost:11434/v1` for Ollama.

@@ -23,7 +23,7 @@ type CommitMessageResponse struct {
 
 var CommitMessageResponseSchema = GenerateSchema[CommitMessageResponse]()
 
-func GenerateSchema[T any]() interface{} {
+func GenerateSchema[T any]() any {
 	reflector := jsonschema.Reflector{
 		AllowAdditionalProperties: false,
 		DoNotReference:            true,
@@ -61,15 +61,17 @@ func run_git_branch() (string, error) {
 }
 
 var (
-	model string
+	model    string
+	endpoint string
 
 	rootCmd = &cobra.Command{
 		Use:   "conventional-commits-ai",
 		Short: "Generate conventional commit messages with AI",
 		Run: func(cmd *cobra.Command, args []string) {
 			apiKey := os.Getenv("OPENAI_API_KEY")
-			if apiKey == "" {
-				fmt.Fprintln(os.Stderr, "OPENAI_API_KEY is not set")
+
+			if apiKey == "" && endpoint == "" {
+				fmt.Fprintln(os.Stderr, "OPENAI_API_KEY is not set (and you are using OpenAI mode)")
 				os.Exit(1)
 			}
 
@@ -91,7 +93,11 @@ var (
 				os.Exit(1)
 			}
 
-			client := openai.NewClient(option.WithAPIKey(apiKey))
+			clientOptions := []option.RequestOption{option.WithAPIKey(apiKey)}
+			if endpoint != "" {
+				clientOptions = append(clientOptions, option.WithBaseURL(endpoint))
+			}
+			client := openai.NewClient(clientOptions...)
 
 			systemPrompt := `You are a commit message generator.
 	You will be given a git diff of the current changes, a log of the last commits, and the current branch name.
@@ -175,5 +181,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().StringVarP(&model, "model", "m", "gpt-4.1", "OpenAI model to use (e.g., gpt-4.1, gpt-5, gpt-5-mini, gpt-5-nano, etc.)")
+	rootCmd.Flags().StringVarP(&model, "model", "m", "gpt-4.1", "Model to use (e.g., gpt-4.1, llama3.2, etc.)")
+	rootCmd.Flags().StringVarP(&endpoint, "endpoint", "e", "", "Custom API endpoint (e.g., http://localhost:11434/v1 for Ollama)")
 }
