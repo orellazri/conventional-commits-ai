@@ -1,4 +1,4 @@
-# conventional-commits-ai
+# AI Conventional Commits
 
 A small CLI that uses the OpenAI API to generate short, conventional-commit–style messages for your current Git changes.
 
