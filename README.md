@@ -12,7 +12,13 @@ It then asks an OpenAI model to propose a concise commit message that matches th
 
 ## Usage
 
-Download the binary from the [releases page](https://github.com/orellazri/conventional-commits-ai/releases) and put it in your `$PATH` (e.g., `/usr/local/bin`).
+Install the CLI using `go install`:
+
+```bash
+go install github.com/orellazri/conventional-commits-ai@latest
+```
+
+Or, download the binary from the [releases page](https://github.com/orellazri/conventional-commits-ai/releases) and put it in your `$PATH` (e.g., `/usr/local/bin`).
 
 From the root of your Git repository, run:
 
