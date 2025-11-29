@@ -130,6 +130,8 @@ var (
 	- contain a ticket number or pull request number, then the scope should be the ticket number or pull request number.
 
 	<subject> is a short description of the change.
+
+	IMPORTANT: Do NOT geneate the body of the commit message. Only the subject.
 	`
 
 			schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{
