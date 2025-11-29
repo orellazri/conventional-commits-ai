@@ -63,15 +63,19 @@ func run_git_branch() (string, error) {
 var (
 	model    string
 	endpoint string
+	apiKey   string
 
 	rootCmd = &cobra.Command{
 		Use:   "conventional-commits-ai",
 		Short: "Generate conventional commit messages with AI",
 		Run: func(cmd *cobra.Command, args []string) {
-			apiKey := os.Getenv("OPENAI_API_KEY")
+			openaiApiKey := os.Getenv("OPENAI_API_KEY")
+			if apiKey == "" && openaiApiKey != "" {
+				apiKey = openaiApiKey
+			}
 
-			if apiKey == "" && endpoint == "" {
-				fmt.Fprintln(os.Stderr, "OPENAI_API_KEY is not set (and you are using OpenAI mode)")
+			if endpoint == "" && apiKey == "" {
+				fmt.Fprintln(os.Stderr, "OPENAI_API_KEY is not set (and you are in OpenAI mode)")
 				os.Exit(1)
 			}
 
@@ -183,4 +187,5 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringVarP(&model, "model", "m", "gpt-4.1", "Model to use (e.g., gpt-4.1, llama3.2, etc.)")
 	rootCmd.Flags().StringVarP(&endpoint, "endpoint", "e", "", "Custom API endpoint (e.g., http://localhost:11434/v1 for Ollama)")
+	rootCmd.Flags().StringVarP(&apiKey, "apikey", "k", "", "API key for custom endpoints")
 }
