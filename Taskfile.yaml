@@ -4,8 +4,8 @@ tasks:
   default:
     desc: List all tasks
     cmds:
-     - task --list-all
-    quiet: true
+      - task --list-all
+    silent: true
 
   build:
     desc: Build the binary
