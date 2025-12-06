@@ -34,7 +34,7 @@ func GenerateSchema[T any]() any {
 }
 
 func run_git_diff() (string, error) {
-	cmd := exec.Command("git", "diff", "HEAD")
+	cmd := exec.Command("git", "diff", "--staged", "HEAD")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
