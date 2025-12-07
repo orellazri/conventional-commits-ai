@@ -32,13 +32,31 @@ func GenerateSchema[T any]() any {
 	schema := reflector.Reflect(v)
 	return schema
 }
-
 func run_git_diff() (string, error) {
-	cmd := exec.Command("git", "diff", "--staged", "HEAD")
+	// First check if there are staged files
+	stagedCmd := exec.Command("git", "diff", "--staged", "--name-only")
+	stagedOutput, err := stagedCmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	// If there are staged files, diff only staged files
+	if len(stagedOutput) > 0 {
+		cmd := exec.Command("git", "diff", "--staged", "HEAD")
+		output, err := cmd.Output()
+		if err != nil {
+			return "", err
+		}
+		return string(output), nil
+	}
+
+	// Otherwise, diff unstaged files
+	cmd := exec.Command("git", "diff", "HEAD")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
+
 	return string(output), nil
 }
 
