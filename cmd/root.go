@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
+	"strings"
 
 	"github.com/invopop/jsonschema"
 	"github.com/openai/openai-go/v3"
@@ -32,9 +33,69 @@ func GenerateSchema[T any]() any {
 	schema := reflector.Reflect(v)
 	return schema
 }
+
+// get_git_crypt_files returns the list of files that are encrypted with
+// git-crypt (i.e. have the "filter=git-crypt" attribute set in .gitattributes).
+// When a git-crypt repository is unlocked, `git diff` emits the decrypted
+// plaintext of these files, so they must be excluded from anything sent to the
+// LLM to avoid leaking secrets.
+func get_git_crypt_files() ([]string, error) {
+	// List all tracked files, then ask git which of them carry the
+	// git-crypt filter attribute.
+	lsCmd := exec.Command("git", "ls-files", "-z")
+	lsOutput, err := lsCmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	files := strings.Split(strings.TrimRight(string(lsOutput), "\x00"), "\x00")
+	if len(files) == 0 || (len(files) == 1 && files[0] == "") {
+		return nil, nil
+	}
+
+	// `git check-attr --stdin -z filter` reads NUL-separated paths on stdin
+	// and emits NUL-separated triplets: <path>\0<attr>\0<value>\0
+	attrCmd := exec.Command("git", "check-attr", "--stdin", "-z", "filter")
+	attrCmd.Stdin = strings.NewReader(strings.Join(files, "\x00"))
+	attrOutput, err := attrCmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	fields := strings.Split(strings.TrimRight(string(attrOutput), "\x00"), "\x00")
+	var crypted []string
+	for i := 0; i+2 < len(fields); i += 3 {
+		path, value := fields[i], fields[i+2]
+		if strings.HasPrefix(value, "git-crypt") {
+			crypted = append(crypted, path)
+		}
+	}
+
+	return crypted, nil
+}
+
 func run_git_diff() (string, error) {
+	cryptFiles, err := get_git_crypt_files()
+	if err != nil {
+		return "", err
+	}
+
+	// Build pathspec exclusions so git-crypt encrypted files never appear in
+	// the diff (their decrypted contents could contain secrets). Git requires
+	// an inclusive pathspec ("." here) alongside any :(exclude) pathspecs,
+	// otherwise nothing matches.
+	var pathspecs []string
+	if len(cryptFiles) > 0 {
+		pathspecs = append(pathspecs, ".")
+		for _, f := range cryptFiles {
+			pathspecs = append(pathspecs, ":(exclude)"+f)
+		}
+	}
+
 	// First check if there are staged files
-	stagedCmd := exec.Command("git", "diff", "--staged", "--name-only")
+	stagedArgs := []string{"diff", "--staged", "--name-only", "--"}
+	stagedArgs = append(stagedArgs, pathspecs...)
+	stagedCmd := exec.Command("git", stagedArgs...)
 	stagedOutput, err := stagedCmd.Output()
 	if err != nil {
 		return "", err
@@ -42,7 +103,9 @@ func run_git_diff() (string, error) {
 
 	// If there are staged files, diff only staged files
 	if len(stagedOutput) > 0 {
-		cmd := exec.Command("git", "diff", "--staged", "HEAD")
+		args := []string{"diff", "--staged", "HEAD", "--"}
+		args = append(args, pathspecs...)
+		cmd := exec.Command("git", args...)
 		output, err := cmd.Output()
 		if err != nil {
 			return "", err
@@ -51,7 +114,9 @@ func run_git_diff() (string, error) {
 	}
 
 	// Otherwise, diff unstaged files
-	cmd := exec.Command("git", "diff", "HEAD")
+	args := []string{"diff", "HEAD", "--"}
+	args = append(args, pathspecs...)
+	cmd := exec.Command("git", args...)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
