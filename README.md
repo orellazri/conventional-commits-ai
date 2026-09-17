@@ -57,3 +57,7 @@ conventional-commits-ai --endpoint http://localhost:11434/v1 --model openai/gpt-
 ```
 
 The endpoint should be a valid OpenAI-compatible API endpoint, such as `http://localhost:11434/v1` for Ollama.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
